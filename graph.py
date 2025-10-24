@@ -27,13 +27,18 @@ class Edge:
 class Graph:
     def __init__(self, isDirected=False):
         self.adj = dict()  # Dicionário de adjacência
-        self.adj_matrix = []
+        self.adj_matrix = [[]]
         self.isDirected = isDirected
+        self.nodes = []
+        self.edges = []
 
     # Função para adicinar um novo nó no grafo (inicializo a lista de adjacência do nó como vazia)
-    def add_node(self, value):
-        if value not in self.adj:
-            self.adj[value] = list()
+    def add_node(self, node:Node):
+        if node not in self.adj:
+            self.adj[node] = list()
+            n = len(self.nodes)
+            self.nodes.append(node)
+        
 
     # Função para adicionar uma nova aresta (atualizo a lista de adjacência dos nós, conforme a direção do grafo)
     def add_edge(self, node1, node2, weight=1):
@@ -42,6 +47,9 @@ class Graph:
         self.adj[node1.values].append((node2.values, weight))
         if not self.isDirected:
             self.adj[node2.values].append((node1.values, weight))
+
+    def remove_node(self, node):
+        pass
 
     def remove_edge(self, node1, node2, weight):
         pass
@@ -84,3 +92,23 @@ class Graph:
         # Tirando os eixos e mostrando o plot
         plt.axis('off')
         plt.show()
+
+    def is_subgraph(G1, G2):
+        """ Comparar as entradas das matrizes de adjacência (O(|V'|²)) """
+        return False
+
+    # Função para gerar uma rede de Barabasi-Albert
+    def random_graph(num_nodes, num_edges, prob, isDirected=False):
+        G = Graph()
+        for i in range(num_nodes):
+            G.add_node(i+1)
+        for _ in range(num_edges):
+            node1 = random.choice(list(G.adj.keys()))
+            node2 = random.choice(list(G.adj.keys()))
+            if random.random() < prob:
+                G.add_edge(node1, node2)
+        return G
+
+    def is_path(self, G, path:list):
+        """ Ver se é caminho e se ele é simples """
+        pass
