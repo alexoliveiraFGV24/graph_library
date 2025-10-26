@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import math
 import random
-import numpy as np
 
 
 class Node:
@@ -39,80 +38,74 @@ class Edge:
 class Graph:
     def __init__(self, isDirected=False):
         self.isDirected = isDirected
-        self.nodes = [] 
+        self.nodes = []
         self.edges = []
-        self.adj = {}  
-        self._adj_matrix = np.array([])
+        self.adj = {}  # Lista de adjacência: {Node: [(vizinho, peso)]}
+        self.adj_matrix = {}  # Matriz de adjacência: {Node: {Node: peso}}
 
-    def add_node(self, node: 'Node'):
+    def add_node(self, node: Node):
         if not isinstance(node, Node):
             raise TypeError("O parâmetro deve ser um objeto Node.")
         if node not in self.nodes:
             self.nodes.append(node)
             self.adj[node] = []
-            self._update_adj_matrix()
+            self.adj_matrix[node] = {}
 
-    def add_edge(self, node1: 'Node', node2: 'Node', weight=1):
+    def add_edge(self, edge: Edge):
+        node1, node2, weight = edge.node1, edge.node2, edge.weight
         self.add_node(node1)
         self.add_node(node2)
-        if (node2, weight) not in self.adj[node1]:
-            self.adj[node1].append((node2, weight))
-        if not self.isDirected and (node1, weight) not in self.adj[node2]:
-            self.adj[node2].append((node1, weight))
-        self.edges.append((node1, node2, weight))
-        self._update_adj_matrix()
+        if node2 not in self.adj[node1]:
+            self.adj[node1].append(node2)
+            self.adj_matrix[node1][node2] = weight
+        if not self.isDirected and node1 not in self.adj[node2]:
+            self.adj[node2].append(node1)
+            self.adj_matrix[node2][node1] = weight
+        if (node1, node2, weight) not in self.edges:
+            self.edges.append((node1, node2, weight))
 
-    def remove_node(self, node: 'Node'):
+    def remove_node(self, node: Node):
         if node not in self.nodes:
             return
-        for n in self.adj:
+        for n in list(self.adj.keys()):
             self.adj[n] = [(nbr, w) for nbr, w in self.adj[n] if nbr != node]
+            self.adj_matrix[n].pop(node, None)
         del self.adj[node]
+        del self.adj_matrix[node]
         self.nodes.remove(node)
         self.edges = [e for e in self.edges if e[0] != node and e[1] != node]
-        self._update_adj_matrix()
 
-    def remove_edge(self, node1: 'Node', node2: 'Node'):
-        if node1 not in self.nodes or node2 not in self.nodes:
+    def remove_edge(self, edge: Edge):
+        node1, node2 = edge.node1, edge.node2
+        if (node1 not in self.nodes) or (node2 not in self.nodes):
             return
         self.adj[node1] = [(nbr, w) for nbr, w in self.adj[node1] if nbr != node2]
+        self.adj_matrix[node1].pop(node2, None)
         if not self.isDirected:
             self.adj[node2] = [(nbr, w) for nbr, w in self.adj[node2] if nbr != node1]
-        self.edges = [e for e in self.edges if not ((e[0] == node1 and e[1] == node2) or 
-                                                   (not self.isDirected and e[0] == node2 and e[1] == node1))]
-        self._update_adj_matrix()
+            self.adj_matrix[node2].pop(node1, None)
+        self.edges = [
+            e for e in self.edges
+            if not ((e[0] == node1 and e[1] == node2) or
+                    (not self.isDirected and e[0] == node2 and e[1] == node1))
+        ]
 
+    def show_adj_matrix(self):
+        nodes = list(self.adj_matrix.keys())
+        print("\nMatriz de Adjacência:")
+        header = "     " + " ".join(f"{n.values:^6}" for n in nodes)
+        print(header)
+        for u in nodes:
+            row = [f"{self.adj_matrix[u].get(v, 0):^6}" for v in nodes]
+            print(f"{u.values:^5} {' '.join(row)}")
 
-    def _update_adj_matrix(self):
-        n = len(self.nodes)
-        self._adj_matrix = np.zeros((n, n), dtype=float)
-        for i, node in enumerate(self.nodes):
-            for neighbor, weight in self.adj[node]:
-                j = self.nodes.index(neighbor)
-                self._adj_matrix[i, j] = weight
-                if not self.isDirected:
-                    self._adj_matrix[j, i] = weight
-
-    @property
-    def adj_matrix(self):
-        self._update_adj_matrix()
-        return self._adj_matrix
-
-    def show_matrix(self):
-        matrix = self.adj_matrix
-        labels = [str(node.values) for node in self.nodes]
-        print("Matriz de Adjacência:")
-        print("    " + "  ".join(labels))
-        for i, row in enumerate(matrix):
-            print(f"{labels[i]:>3} {row}")
-
-    def show(self):
-        print("Listas de Adjacência:")
+    def show_adj_list(self):
+        print("\nListas de Adjacência:")
         for node, neighbors in self.adj.items():
             vizinhos = ', '.join(f"{nbr.values} (w={w})" for nbr, w in neighbors)
             print(f"{node.values} -> [{vizinhos}]")
 
-    def plot(self):
+    def plot_graph(self):
         n = len(self.nodes)
         if n == 0:
             print("Grafo vazio.")
@@ -139,11 +132,7 @@ class Graph:
         plt.axis("off")
         plt.show()
 
-    def is_subgraph(G1, G2):
-        """ Comparar as entradas das matrizes de adjacência (O(|V'|²)) """
-        return False
-
-    def random_graph(num_nodes, num_edges, prob, isDirected=False):
+    def random_graph(self, num_nodes, num_edges, prob, isDirected=False):
         G = Graph()
         for i in range(num_nodes):
             G.add_node(i+1)
@@ -153,7 +142,28 @@ class Graph:
             if random.random() < prob:
                 G.add_edge(node1, node2)
         return G
+    
+    def is_subgraph(self, G1:'Graph', G2:'Graph'):
+        """ Vê se G2 é subgrafo de G1 """
+        if not G2:
+            return True
+        if len(G2.nodes) > len(G1.nodes):
+            return False
+        for edge_G2 in G2.edges:
+            if edge_G2 in G1.edges:
+                continue
+            else:
+                return False
+        return True
 
-    def is_path(self, G, path:list):
-        """ Ver se é caminho e se ele é simples """
-        pass
+    def is_path(self, G:'Graph', path:list):
+        """ Ver se o caminho path é caminho de G, além de dizer se ele é simples """
+        n = len(path)
+        if n == 0:
+            return True
+        for i in range(1, n):
+            node = path[i-1]
+            node_next = path[i]
+            if not node_next in G.adj[node]:
+                return False
+        return True
