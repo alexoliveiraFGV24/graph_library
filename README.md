@@ -1,1 +1,1 @@
-# graph_library
+# Graph Library for further assignments

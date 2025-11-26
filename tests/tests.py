@@ -1,4 +1,5 @@
-from graph import Graph
+from src.structs import Graph
+from src.graph_utils import *
 import unittest
 
 class TestGraph(unittest.TestCase):
